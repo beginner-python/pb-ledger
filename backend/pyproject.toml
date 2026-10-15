@@ -15,11 +15,11 @@ dependencies = [
 dev = [
  "django-debug-toolbar>=6.2.0",
  "ruff>=0.14.13",
- "uvicorn>=0.38.0",
+ "uvicorn>=0.54.0",
 ]
 prod = [
   "gunicorn>=25.0.1",
-  "uvicorn>=0.38.0",
+  "uvicorn>=0.54.0",
 ]
 
 [tool.ruff]
