@@ -1,0 +1,49 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Node / Vite
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+*.sqlite3
+backend/static/
+backend/staticfiles/
+.ruff_cache/
+local_settings.py
+local_override.py
+
+# Env (.env.example と、デモの初期表示月を持つ .env.demo だけ追跡する)
+.env
+.env.*
+!.env.example
+!.env.demo
+
+# Docker
+docker-compose.override.yml
+
+backups/

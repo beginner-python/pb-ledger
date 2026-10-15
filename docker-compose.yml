@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=pb_ledger
+      - POSTGRES_PASSWORD=pb_ledger_dev_only
+      - POSTGRES_USER=pb_ledger
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    volumes:
+      - ./backend/:/app
+      - venv:/app/.venv
+    depends_on:
+      - db
+    ports:
+      - "${BACKEND_HOST_PORT:-8000}:8000"
+    # それ以外の値 (DB 接続先、SECRET_KEY、JWT の期限) は settings.local の開発用既定値を使う
+    environment:
+      - DJANGO_SETTINGS_MODULE=pb_ledger.settings.local
+      - FRONTEND_ORIGINS=http://localhost:5173
+
+  frontend:
+    build:
+      context: ./frontend
+    volumes:
+      - ./frontend:/app
+      - node-modules:/app/node_modules
+    ports:
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
+  venv:
+  node-modules:
