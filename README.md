@@ -1,6 +1,6 @@
 # PB Ledger
 
-[![CI](https://github.com/beginner-python/pb-ledger/actions/workflows/ci.yml/badge.svg)](https://github.com/beginner-python/pb-ledger/actions/workflows/ci.yml)
+[![CI](https://github.com/beginner-python/pb-ledger/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beginner-python/pb-ledger/actions/workflows/ci.yml?query=branch%3Amain)
 
 個人向けの家計アプリです。月ごとの予算と支出、銀行口座や現金の残高、クレジットカードの利用額を一つの画面で記録します。
 
