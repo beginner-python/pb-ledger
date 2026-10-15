@@ -6,10 +6,12 @@ from decimal import Decimal
 
 from django.db import IntegrityError, transaction
 from django.db.models import Sum
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from household.api import schema as H
 from household.api.common import _format_yen, _parse_year_month, parse_decimal, serialize_decimal
 from household.models import (
     BudgetAllocation,
@@ -120,6 +122,11 @@ def _validate_parent_child_budget_constraint(
 
 
 class BudgetCreateAPIView(APIView):
+    @extend_schema(
+        summary="カテゴリ予算を登録",
+        request=H.BudgetIn,
+        responses={201: H.BudgetOut, 400: H.DetailOut},
+    )
     def post(self, request):
         year = request.data.get("year")
         month = request.data.get("month")
@@ -213,6 +220,11 @@ class BudgetCreateAPIView(APIView):
 
 
 class BudgetDetailAPIView(APIView):
+    @extend_schema(
+        summary="カテゴリ予算を更新",
+        request=H.BudgetPatchIn,
+        responses={200: H.BudgetOut, 400: H.DetailOut, 404: H.DetailOut},
+    )
     def patch(self, request, budget_id: int):
         try:
             allocation = BudgetAllocation.objects.select_related("period").get(pk=budget_id)
@@ -281,6 +293,7 @@ class BudgetDetailAPIView(APIView):
             }
         )
 
+    @extend_schema(summary="カテゴリ予算を削除", responses={204: None, 404: H.DetailOut})
     def delete(self, request, budget_id: int):
         try:
             allocation = BudgetAllocation.objects.get(pk=budget_id)
@@ -297,6 +310,11 @@ class BudgetDetailAPIView(APIView):
 class BudgetPeriodTotalAPIView(APIView):
     """月の総予算 (上限) を設定する。"""
 
+    @extend_schema(
+        summary="月の上限を設定",
+        request=H.PeriodTotalIn,
+        responses={200: H.PeriodTotalOut, 400: H.DetailOut},
+    )
     def put(self, request):
         ym, err = _parse_year_month(request.data.get("year"), request.data.get("month"))
         if err:
@@ -333,6 +351,11 @@ class BudgetPeriodTotalAPIView(APIView):
 class BudgetCopyAPIView(APIView):
     """指定月の全カテゴリ予算をターゲット月に複製する。既存はスキップ。"""
 
+    @extend_schema(
+        summary="前月などの予算を別の月へ複製",
+        request=H.BudgetCopyIn,
+        responses={201: H.BudgetCopyOut, 400: H.DetailOut},
+    )
     def post(self, request):
         source, err = _parse_year_month(
             request.data.get("source_year"), request.data.get("source_month")

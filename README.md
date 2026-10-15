@@ -55,6 +55,10 @@ flowchart LR
 
 **公開デモはバックエンドを持たない。** 無料枠のサーバーは数分でスリープして初回アクセスに 1 分近く待たせるか、データベースが一定期間で消えます。閲覧できれば十分な用途なので、実バックエンドの応答を記録して静的に配信する形にしました。
 
+## API 仕様
+
+OpenAPI 3 の定義を [docs/openapi.yaml](docs/openapi.yaml) に置いています（drf-spectacular で生成、CI でコードとの差分を検査）。ローカルで起動すると http://localhost:8000/api/docs/ で Swagger UI から全エンドポイントを試せます。認証はログイン API で受け取ったアクセストークンを Bearer で付けます。
+
 ## ローカルで動かす
 
 Docker と Docker Compose が必要です。

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from datetime import date
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ledger.api import schema as S
 from ledger.api.parsing import InvalidAmountError, get_month_range, parse_amount
 from ledger.models import (
     NormalizedTransaction,
@@ -74,6 +76,11 @@ def _validate_transfer_transaction_link(
 
 
 class TransferListCreateAPIView(APIView):
+    @extend_schema(
+        summary="振替の一覧 (月指定)",
+        parameters=[S.MONTH_PARAM],
+        responses={200: S.TransfersOut, 400: S.ErrorOut},
+    )
     def get(self, request):
         month_value = request.query_params.get("month")
         qs = Transfer.objects.all()
@@ -103,6 +110,11 @@ class TransferListCreateAPIView(APIView):
         transfers = qs.order_by("-date", "-id")
         return Response({"transfers": [serialize_transfer(t) for t in transfers]})
 
+    @extend_schema(
+        summary="振替を登録 (明細との紐付けも可)",
+        request=S.TransferIn,
+        responses={201: S.TransferOut, 400: S.ErrorOut},
+    )
     def post(self, request):
         date_value = request.data.get("date")
         from_account_id = request.data.get("from_account_id") or request.data.get("fromAccountId")
@@ -202,6 +214,7 @@ class TransferListCreateAPIView(APIView):
 
 
 class TransferDetailAPIView(APIView):
+    @extend_schema(summary="振替を削除", responses={200: S.DeletedOut, 404: S.ErrorOut})
     def delete(self, request, transfer_id):
         deleted, _ = Transfer.objects.filter(id=transfer_id).delete()
         if deleted == 0:
@@ -211,6 +224,11 @@ class TransferDetailAPIView(APIView):
             )
         return Response({"deleted": 1})
 
+    @extend_schema(
+        summary="振替を更新",
+        request=S.TransferPatchIn,
+        responses={200: S.TransferOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def patch(self, request, transfer_id):
         try:
             transfer = Transfer.objects.get(id=transfer_id)

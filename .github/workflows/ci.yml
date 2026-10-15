@@ -47,6 +47,9 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run manage.py makemigrations --check --dry-run
       - run: uv run manage.py test --noinput
+      # docs/openapi.yaml がコードと一致しているか (警告ゼロで生成でき、差分が無いこと)
+      - run: uv run manage.py spectacular --file /tmp/openapi.yaml --validate --fail-on-warn
+      - run: diff -u ../docs/openapi.yaml /tmp/openapi.yaml
 
   frontend:
     name: frontend (lint / types / build)

@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import date
 
 from django.db import IntegrityError, transaction
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ledger.api import schema as S
 from ledger.api.balances import snapshot_payload
 from ledger.api.constants import FINANCIAL_ASSET_KIND, KIND_TO_PAYMENT_TYPE
 from ledger.api.parsing import InvalidAmountError, normalize_asset_kind, parse_amount
@@ -21,6 +23,11 @@ from ledger.models import (
 
 
 class SnapshotCreateAPIView(APIView):
+    @extend_schema(
+        summary="残高スナップショットの一覧",
+        parameters=[S.ASSET_KIND_PARAM, S.ACCOUNT_ID_PARAM],
+        responses={200: S.SnapshotsOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def get(self, request):
         asset_kind = normalize_asset_kind(
             request.query_params.get("asset_kind") or request.query_params.get("assetKind")
@@ -64,6 +71,11 @@ class SnapshotCreateAPIView(APIView):
             {"snapshots": [snapshot_payload(snapshot, asset_kind) for snapshot in snapshots]}
         )
 
+    @extend_schema(
+        summary="残高スナップショットを登録 (同日は上書き)",
+        request=S.SnapshotIn,
+        responses={201: S.CreatedOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def post(self, request):
         asset_kind = normalize_asset_kind(
             request.data.get("asset_kind") or request.data.get("assetKind")
@@ -154,6 +166,12 @@ class SnapshotCreateAPIView(APIView):
 
 
 class SnapshotDetailAPIView(APIView):
+    @extend_schema(
+        summary="スナップショットを更新",
+        parameters=[S.ASSET_KIND_PARAM],
+        request=S.SnapshotPatchIn,
+        responses={200: S.SnapshotUpdatedOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def patch(self, request, snapshot_id):
         asset_kind = normalize_asset_kind(
             request.query_params.get("asset_kind")
@@ -237,6 +255,11 @@ class SnapshotDetailAPIView(APIView):
             }
         )
 
+    @extend_schema(
+        summary="スナップショットを削除",
+        parameters=[S.ASSET_KIND_PARAM],
+        responses={200: S.DeletedOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def delete(self, request, snapshot_id):
         asset_kind = normalize_asset_kind(
             request.query_params.get("asset_kind") or request.query_params.get("assetKind")

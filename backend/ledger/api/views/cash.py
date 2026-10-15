@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import date
 
 from django.db.models import Count, Sum
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ledger.api import schema as S
 from ledger.api.constants import DECIMAL_ZERO
 from ledger.api.parsing import InvalidAmountError, get_month_range, parse_amount
 from ledger.models import (
@@ -102,6 +104,11 @@ def _parse_cash_adjustment_payload(data, *, partial: bool = False):
 
 
 class CashAdjustmentListCreateAPIView(APIView):
+    @extend_schema(
+        summary="現金の入出金一覧",
+        parameters=[S.MONTH_PARAM, S.PAYMENT_ACCOUNT_ID_PARAM],
+        responses={200: S.CashAdjustmentsOut, 400: S.ErrorOut},
+    )
     def get(self, request):
         qs = CashAdjustment.objects.all()
         account_id = request.query_params.get("payment_account_id") or request.query_params.get(
@@ -126,6 +133,11 @@ class CashAdjustmentListCreateAPIView(APIView):
             }
         )
 
+    @extend_schema(
+        summary="現金の入出金を登録",
+        request=S.CashAdjustmentIn,
+        responses={201: S.CashAdjustmentOut, 400: S.ErrorOut},
+    )
     def post(self, request):
         parsed, error = _parse_cash_adjustment_payload(request.data, partial=False)
         if error:
@@ -135,6 +147,11 @@ class CashAdjustmentListCreateAPIView(APIView):
 
 
 class CashAdjustmentDetailAPIView(APIView):
+    @extend_schema(
+        summary="現金の入出金を更新",
+        request=S.CashAdjustmentPatchIn,
+        responses={200: S.CashAdjustmentOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def patch(self, request, adjustment_id):
         try:
             adjustment = CashAdjustment.objects.get(id=adjustment_id)
@@ -151,6 +168,7 @@ class CashAdjustmentDetailAPIView(APIView):
         adjustment.save()
         return Response(serialize_cash_adjustment(adjustment))
 
+    @extend_schema(summary="現金の入出金を削除", responses={200: S.DeletedOut, 404: S.ErrorOut})
     def delete(self, request, adjustment_id):
         deleted, _ = CashAdjustment.objects.filter(id=adjustment_id).delete()
         if deleted == 0:
@@ -166,6 +184,11 @@ class CashAccountHistoryAPIView(APIView):
     現金口座の入出履歴を Transfer / HouseholdExpense / CashAdjustment から統合して返す。
     """
 
+    @extend_schema(
+        summary="現金口座の履歴 (振替・支出・入出金)",
+        parameters=[S.MONTH_PARAM],
+        responses={200: S.CashHistoryOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def get(self, request, account_id):
         try:
             account = PaymentAccount.objects.get(id=account_id)

@@ -6,10 +6,12 @@ from decimal import Decimal
 
 from django.db.models import Sum
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from household.api import schema as H
 from household.api.common import serialize_decimal
 from household.models import (
     BudgetAllocation,
@@ -20,6 +22,11 @@ from household.models import (
 
 
 class MonthlyExpenseSummaryAPIView(APIView):
+    @extend_schema(
+        summary="月のカテゴリ別支出",
+        parameters=[H.YEAR_PARAM, H.MONTH_PARAM],
+        responses={200: H.ExpenseSummaryOut, 400: H.DetailOut},
+    )
     def get(self, request):
         year_param = request.query_params.get("year")
         month_param = request.query_params.get("month")
@@ -80,6 +87,11 @@ class MonthlyExpenseSummaryAPIView(APIView):
 
 
 class MonthlyBudgetSummaryAPIView(APIView):
+    @extend_schema(
+        summary="月の予算と使用状況",
+        parameters=[H.YEAR_PARAM, H.MONTH_PARAM],
+        responses={200: H.BudgetSummaryOut, 400: H.DetailOut},
+    )
     def get(self, request):
         year_param = request.query_params.get("year")
         month_param = request.query_params.get("month")
@@ -205,6 +217,7 @@ class MonthlyBudgetSummaryAPIView(APIView):
 
 
 class AnnualExpenseYearsAPIView(APIView):
+    @extend_schema(summary="支出が存在する年の一覧", responses={200: H.YEARS_SCHEMA})
     def get(self, request):
         years = (
             HouseholdExpense.objects.values_list("date__year", flat=True)

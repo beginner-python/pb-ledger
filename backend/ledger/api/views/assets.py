@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.db.models import F, Q, Sum
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ledger.api import schema as S
 from ledger.api.balances import (
     build_payment_account_payload,
     latest_financial_asset_snapshot_by_asset,
@@ -33,6 +35,11 @@ from ledger.models import (
 
 
 class MonthlySummaryAPIView(APIView):
+    @extend_schema(
+        summary="銀行口座の月次収支 (振替済み明細を除く)",
+        parameters=[S.MONTH_PARAM],
+        responses={200: S.MonthlySummaryOut, 400: S.ErrorOut},
+    )
     def get(self, request):
         month_value = request.query_params.get("month")
         month_range = get_month_range(month_value)
@@ -86,6 +93,11 @@ class MonthlySummaryAPIView(APIView):
 
 
 class AssetsAPIView(APIView):
+    @extend_schema(
+        summary="資産の一覧と前月比",
+        parameters=[S.MONTH_PARAM],
+        responses={200: S.AssetsOut, 400: S.ErrorOut},
+    )
     def get(self, request):
         month_value = request.query_params.get("month")
         month_range = get_month_range(month_value)

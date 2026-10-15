@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from django.db import IntegrityError
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from household.api import schema as H
 from household.api.constants import HEX_COLOR_PATTERN
 from household.api.views.budgets import _validate_parent_change_against_budgets
 from household.models import (
@@ -31,6 +33,7 @@ def _serialize_category(category: HouseholdCategory, child_counts: dict[int, int
 
 
 class CategoryCreateAPIView(APIView):
+    @extend_schema(summary="カテゴリの一覧", responses={200: H.CategoryOut(many=True)})
     def get(self, request):
         categories = list(HouseholdCategory.objects.order_by("name"))
         child_counts: dict[int, int] = {}
@@ -39,6 +42,11 @@ class CategoryCreateAPIView(APIView):
                 child_counts[category.parent_id] = child_counts.get(category.parent_id, 0) + 1
         return Response([_serialize_category(category, child_counts) for category in categories])
 
+    @extend_schema(
+        summary="カテゴリを作成",
+        request=H.CategoryIn,
+        responses={201: H.CategoryOut, 400: H.DetailOut},
+    )
     def post(self, request):
         name = (request.data.get("name") or "").strip()
         color = (request.data.get("color") or "").strip()
@@ -101,6 +109,11 @@ class CategoryCreateAPIView(APIView):
 
 
 class CategoryDetailAPIView(APIView):
+    @extend_schema(
+        summary="カテゴリを更新",
+        request=H.CategoryIn,
+        responses={200: H.CategoryOut, 400: H.DetailOut, 404: H.DetailOut},
+    )
     def patch(self, request, category_id: int):
         try:
             category = HouseholdCategory.objects.get(pk=category_id)
@@ -197,6 +210,9 @@ class CategoryDetailAPIView(APIView):
 
         return Response(_serialize_category(category))
 
+    @extend_schema(
+        summary="カテゴリを削除", responses={200: H.DeletedOut, 400: H.DetailOut, 404: H.DetailOut}
+    )
     def delete(self, request, category_id: int):
         try:
             category = HouseholdCategory.objects.get(pk=category_id)

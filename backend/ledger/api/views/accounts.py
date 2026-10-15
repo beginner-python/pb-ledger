@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from django.db.models import Count, ProtectedError, Q, Sum
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ledger.api import schema as S
 from ledger.api.constants import (
     BANK_ACCOUNT_KIND,
     CREDIT_CARD_KIND,
@@ -18,7 +20,6 @@ from ledger.api.constants import (
 from ledger.api.parsing import get_month_range, normalize_asset_kind, parse_optional_int
 from ledger.models import (
     AccountBalanceSnapshot,
-    BankAccount,
     CashAdjustment,
     FinancialAsset,
     FinancialAssetSnapshot,
@@ -31,6 +32,9 @@ from ledger.models import (
 class PaymentAccountsAPIView(APIView):
     """支払元として選択可能な全 PaymentAccount を返す。家計支出の選択肢用。"""
 
+    @extend_schema(
+        summary="決済手段 (銀行・カード・現金) の一覧", responses={200: S.PaymentAccountsOut}
+    )
     def get(self, request):
         accounts = (
             PaymentAccount.objects.filter(is_archived=False)
@@ -53,6 +57,11 @@ class PaymentAccountsAPIView(APIView):
 
 
 class BankAccountCreateAPIView(APIView):
+    @extend_schema(
+        summary="口座・カード・現金・金融資産を作成",
+        request=S.AccountCreateIn,
+        responses={201: S.CreatedOut, 400: S.ErrorOut},
+    )
     def post(self, request):
         asset_kind = normalize_asset_kind(
             request.data.get("asset_kind") or request.data.get("assetKind")
@@ -107,22 +116,16 @@ class BankAccountCreateAPIView(APIView):
             kwargs["closing_day"] = closing_day
             kwargs["payment_day"] = payment_day
 
-            payment_destination_id = request.data.get("payment_destination_id") or request.data.get(
-                "paymentDestinationId"
-            )
-            if payment_destination_id:
-                if not BankAccount.objects.filter(id=payment_destination_id).exists():
-                    return Response(
-                        {"error": "引落先の銀行口座が見つかりません。"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                kwargs["payment_destination_id"] = payment_destination_id
-
         PaymentAccount.objects.create(**kwargs)
         return Response({"created": 1}, status=status.HTTP_201_CREATED)
 
 
 class BankAccountDetailAPIView(APIView):
+    @extend_schema(
+        summary="口座を削除 (明細とスナップショットも削除)",
+        parameters=[S.ASSET_KIND_PARAM],
+        responses={200: S.AccountDeleteOut, 400: S.ErrorOut, 404: S.ErrorOut, 409: S.ErrorOut},
+    )
     def delete(self, request, account_id):
         asset_kind = normalize_asset_kind(
             request.query_params.get("asset_kind") or request.query_params.get("assetKind")
@@ -203,6 +206,12 @@ class BankAccountDetailAPIView(APIView):
             }
         )
 
+    @extend_schema(
+        summary="口座の参照 URL を更新",
+        parameters=[S.ASSET_KIND_PARAM],
+        request=S.AccountPatchIn,
+        responses={200: S.AccountPatchOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def patch(self, request, account_id):
         asset_kind = normalize_asset_kind(
             request.query_params.get("asset_kind")
@@ -261,6 +270,11 @@ class BankAccountDetailAPIView(APIView):
 
 
 class AccountTransactionsAPIView(APIView):
+    @extend_schema(
+        summary="口座の明細一覧 (月指定)",
+        parameters=[S.MONTH_PARAM, S.LIMIT_PARAM],
+        responses={200: S.TransactionsOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def get(self, request, account_id):
         if not PaymentAccount.objects.filter(id=account_id).exists():
             return Response(

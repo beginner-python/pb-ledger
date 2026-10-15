@@ -32,3 +32,20 @@ class LoginThrottleTests(TestCase):
         )
         self.assertEqual(res.status_code, 200)
         self.assertIn("access", res.json())
+
+
+class ApiSchemaTests(TestCase):
+    """OpenAPI スキーマと Swagger UI は認証なしで取得できる。"""
+
+    def test_schema_is_public_and_valid(self):
+        res = APIClient().get("/api/schema/", HTTP_ACCEPT="application/vnd.oai.openapi")
+        self.assertEqual(res.status_code, 200)
+        body = res.content.decode("utf-8")
+        self.assertIn("openapi: 3", body)
+        self.assertIn("/api/ledger/assets/", body)
+        # 応答は camelCase で配信されるので、スキーマも camelCase になっている
+        self.assertIn("totalAssets", body)
+
+    def test_docs_page_is_public(self):
+        res = APIClient().get("/api/docs/")
+        self.assertEqual(res.status_code, 200)

@@ -1,0 +1,3047 @@
+openapi: 3.0.3
+info:
+  title: PB Ledger API
+  version: 1.0.0
+  description: 家計簿 (予算と支出)、資産管理 (口座・現金・金融資産の残高)、クレジットカードの利用額を扱う REST API。認証は Bearer
+    のアクセストークンで、リフレッシュトークンは HttpOnly Cookie に置く。
+paths:
+  /api/accounts/me/:
+    get:
+      operationId: accountsMeRetrieve
+      tags:
+      - accounts
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticatedUser'
+          description: ''
+  /api/auth/login/:
+    post:
+      operationId: authLoginCreate
+      description: access を JSON で返し、refresh は HttpOnly Cookie に保存する。
+      summary: ログイン
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginInRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginOut'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/auth/logout/:
+    post:
+      operationId: authLogoutCreate
+      description: refresh を失効させ Cookie を削除する。
+      summary: ログアウト
+      tags:
+      - auth
+      responses:
+        '204':
+          description: No response body
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/auth/refresh/:
+    post:
+      operationId: authRefreshCreate
+      description: Cookie の refresh を使う。Origin ヘッダが設定値と一致する場合のみ受け付ける。
+      summary: アクセストークンを再発行
+      tags:
+      - auth
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessOut'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/budgets/:
+    post:
+      operationId: householdBudgetsCreate
+      summary: カテゴリ予算を登録
+      tags:
+      - household
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BudgetInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/budgets/{budgetId}/:
+    patch:
+      operationId: householdBudgetsPartialUpdate
+      summary: カテゴリ予算を更新
+      parameters:
+      - in: path
+        name: budgetId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - household
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBudgetPatchInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBudgetPatchInRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+    delete:
+      operationId: householdBudgetsDestroy
+      summary: カテゴリ予算を削除
+      parameters:
+      - in: path
+        name: budgetId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - household
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/budgets/copy/:
+    post:
+      operationId: householdBudgetsCopyCreate
+      description: 指定月の全カテゴリ予算をターゲット月に複製する。既存はスキップ。
+      summary: 前月などの予算を別の月へ複製
+      tags:
+      - household
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetCopyInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BudgetCopyInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetCopyOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/budgets/period/total/:
+    put:
+      operationId: householdBudgetsPeriodTotalUpdate
+      description: 月の総予算 (上限) を設定する。
+      summary: 月の上限を設定
+      tags:
+      - household
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeriodTotalInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PeriodTotalInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodTotalOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/budgets/summary/:
+    get:
+      operationId: householdBudgetsSummaryRetrieve
+      summary: 月の予算と使用状況
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: integer
+        description: 対象月 (1〜12)。
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: 対象年 (西暦)。
+      tags:
+      - household
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BudgetSummaryOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/categories/:
+    get:
+      operationId: householdCategoriesList
+      summary: カテゴリの一覧
+      tags:
+      - household
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryOut'
+          description: ''
+    post:
+      operationId: householdCategoriesCreate
+      summary: カテゴリを作成
+      tags:
+      - household
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoryInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/categories/{categoryId}/:
+    patch:
+      operationId: householdCategoriesPartialUpdate
+      summary: カテゴリを更新
+      parameters:
+      - in: path
+        name: categoryId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - household
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoryInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoryInRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+    delete:
+      operationId: householdCategoriesDestroy
+      summary: カテゴリを削除
+      parameters:
+      - in: path
+        name: categoryId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - household
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/expenses/:
+    get:
+      operationId: householdExpensesList
+      summary: 支出の一覧
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: integer
+        description: 対象月 (1〜12)。
+      - in: query
+        name: paymentAccountId
+        schema:
+          type: integer
+        description: 支払元の決済手段 ID で絞り込む。
+      - in: query
+        name: sourceCashAdjustmentId
+        schema:
+          type: integer
+        description: この現金入出金に紐付いた支出だけを返す。
+      - in: query
+        name: sourceTransactionId
+        schema:
+          type: integer
+        description: この明細に紐付いた支出だけを返す。
+      - in: query
+        name: unlinkedOnly
+        schema:
+          type: boolean
+        description: true なら明細にも現金入出金にも紐付いていない支出だけを返す。
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: 対象年 (西暦)。
+      tags:
+      - household
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExpenseOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+    post:
+      operationId: householdExpensesCreate
+      summary: 支出を登録
+      tags:
+      - household
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExpenseInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseCreatedOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/expenses/{expenseId}/:
+    patch:
+      operationId: householdExpensesPartialUpdate
+      summary: 支出を更新 (明細・現金入出金への紐付け変更を含む)
+      parameters:
+      - in: path
+        name: expenseId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - household
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedExpensePatchInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedExpensePatchInRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseUpdatedOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+    delete:
+      operationId: householdExpensesDestroy
+      summary: 支出を削除
+      parameters:
+      - in: path
+        name: expenseId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - household
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/expenses/summary/:
+    get:
+      operationId: householdExpensesSummaryRetrieve
+      summary: 月のカテゴリ別支出
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: integer
+        description: 対象月 (1〜12)。
+      - in: query
+        name: year
+        schema:
+          type: integer
+        description: 対象年 (西暦)。
+      tags:
+      - household
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseSummaryOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailOut'
+          description: ''
+  /api/household/expenses/years/:
+    get:
+      operationId: householdExpensesYearsRetrieve
+      summary: 支出が存在する年の一覧
+      tags:
+      - household
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+                example:
+                - 2025
+                - 2026
+          description: ''
+  /api/ledger/accounts/:
+    post:
+      operationId: ledgerAccountsCreate
+      summary: 口座・カード・現金・金融資産を作成
+      tags:
+      - ledger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountCreateInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AccountCreateInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/accounts/{accountId}/:
+    patch:
+      operationId: ledgerAccountsPartialUpdate
+      summary: 口座の参照 URL を更新
+      parameters:
+      - in: path
+        name: accountId
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: assetKind
+        schema:
+          type: string
+          enum:
+          - bank_account
+          - cash
+          - credit_card
+          - financial_asset
+        description: 資産種別。
+        required: true
+      tags:
+      - ledger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountPatchInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAccountPatchInRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountPatchOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+    delete:
+      operationId: ledgerAccountsDestroy
+      summary: 口座を削除 (明細とスナップショットも削除)
+      parameters:
+      - in: path
+        name: accountId
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: assetKind
+        schema:
+          type: string
+          enum:
+          - bank_account
+          - cash
+          - credit_card
+          - financial_asset
+        description: 資産種別。
+        required: true
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDeleteOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/accounts/{accountId}/cash-history/:
+    get:
+      operationId: ledgerAccountsCashHistoryRetrieve
+      description: 現金口座の入出履歴を Transfer / HouseholdExpense / CashAdjustment から統合して返す。
+      summary: 現金口座の履歴 (振替・支出・入出金)
+      parameters:
+      - in: path
+        name: accountId
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: 対象月 (YYYY-MM)。省略時は当月。
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashHistoryOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/accounts/{accountId}/csv-templates/:
+    get:
+      operationId: ledgerAccountsCsvTemplatesRetrieve
+      summary: 口座の CSV テンプレート
+      parameters:
+      - in: path
+        name: accountId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsvTemplateOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+    post:
+      operationId: ledgerAccountsCsvTemplatesCreate
+      summary: CSV テンプレートを登録 (同時に明細の取込も可)
+      parameters:
+      - in: path
+        name: accountId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ledger
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CsvTemplateInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsvTemplateCreatedOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/accounts/{accountId}/transactions/:
+    get:
+      operationId: ledgerAccountsTransactionsRetrieve
+      summary: 口座の明細一覧 (月指定)
+      parameters:
+      - in: path
+        name: accountId
+        schema:
+          type: integer
+        required: true
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 最大件数 (1〜200、既定 50)。
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: 対象月 (YYYY-MM)。省略時は当月。
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionsOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/accounts/upload-csv/:
+    post:
+      operationId: ledgerAccountsUploadCsvCreate
+      summary: テンプレートに従って CSV を取り込む
+      tags:
+      - ledger
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CsvImportInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/assets/:
+    get:
+      operationId: ledgerAssetsRetrieve
+      summary: 資産の一覧と前月比
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: 対象月 (YYYY-MM)。省略時は当月。
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetsOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/cash-adjustments/:
+    get:
+      operationId: ledgerCashAdjustmentsRetrieve
+      summary: 現金の入出金一覧
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: 対象月 (YYYY-MM)。省略時は当月。
+      - in: query
+        name: paymentAccountId
+        schema:
+          type: integer
+        description: 現金口座の ID で絞り込む。
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashAdjustmentsOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+    post:
+      operationId: ledgerCashAdjustmentsCreate
+      summary: 現金の入出金を登録
+      tags:
+      - ledger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashAdjustmentInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CashAdjustmentInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashAdjustmentOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/cash-adjustments/{adjustmentId}/:
+    patch:
+      operationId: ledgerCashAdjustmentsPartialUpdate
+      summary: 現金の入出金を更新
+      parameters:
+      - in: path
+        name: adjustmentId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ledger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCashAdjustmentPatchInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCashAdjustmentPatchInRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashAdjustmentOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+    delete:
+      operationId: ledgerCashAdjustmentsDestroy
+      summary: 現金の入出金を削除
+      parameters:
+      - in: path
+        name: adjustmentId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/monthly-summary/:
+    get:
+      operationId: ledgerMonthlySummaryRetrieve
+      summary: 銀行口座の月次収支 (振替済み明細を除く)
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: 対象月 (YYYY-MM)。省略時は当月。
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlySummaryOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/payment-accounts/:
+    get:
+      operationId: ledgerPaymentAccountsRetrieve
+      description: 支払元として選択可能な全 PaymentAccount を返す。家計支出の選択肢用。
+      summary: 決済手段 (銀行・カード・現金) の一覧
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentAccountsOut'
+          description: ''
+  /api/ledger/snapshots/:
+    get:
+      operationId: ledgerSnapshotsRetrieve
+      summary: 残高スナップショットの一覧
+      parameters:
+      - in: query
+        name: accountId
+        schema:
+          type: integer
+        description: 口座 (金融資産なら資産) の ID。
+        required: true
+      - in: query
+        name: assetKind
+        schema:
+          type: string
+          enum:
+          - bank_account
+          - cash
+          - credit_card
+          - financial_asset
+        description: 資産種別。
+        required: true
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotsOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+    post:
+      operationId: ledgerSnapshotsCreate
+      summary: 残高スナップショットを登録 (同日は上書き)
+      tags:
+      - ledger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnapshotInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SnapshotInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/snapshots/{snapshotId}/:
+    patch:
+      operationId: ledgerSnapshotsPartialUpdate
+      summary: スナップショットを更新
+      parameters:
+      - in: query
+        name: assetKind
+        schema:
+          type: string
+          enum:
+          - bank_account
+          - cash
+          - credit_card
+          - financial_asset
+        description: 資産種別。
+        required: true
+      - in: path
+        name: snapshotId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ledger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSnapshotPatchInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSnapshotPatchInRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotUpdatedOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+    delete:
+      operationId: ledgerSnapshotsDestroy
+      summary: スナップショットを削除
+      parameters:
+      - in: query
+        name: assetKind
+        schema:
+          type: string
+          enum:
+          - bank_account
+          - cash
+          - credit_card
+          - financial_asset
+        description: 資産種別。
+        required: true
+      - in: path
+        name: snapshotId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/transfers/:
+    get:
+      operationId: ledgerTransfersRetrieve
+      summary: 振替の一覧 (月指定)
+      parameters:
+      - in: query
+        name: month
+        schema:
+          type: string
+        description: 対象月 (YYYY-MM)。省略時は当月。
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransfersOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+    post:
+      operationId: ledgerTransfersCreate
+      summary: 振替を登録 (明細との紐付けも可)
+      tags:
+      - ledger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TransferInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+  /api/ledger/transfers/{transferId}/:
+    patch:
+      operationId: ledgerTransfersPartialUpdate
+      summary: 振替を更新
+      parameters:
+      - in: path
+        name: transferId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ledger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTransferPatchInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTransferPatchInRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferOut'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+    delete:
+      operationId: ledgerTransfersDestroy
+      summary: 振替を削除
+      parameters:
+      - in: path
+        name: transferId
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ledger
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedOut'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: ''
+components:
+  schemas:
+    AccessOut:
+      type: object
+      properties:
+        access:
+          type: string
+          description: 再発行したアクセストークン
+      required:
+      - access
+    AccountCreateInRequest:
+      type: object
+      properties:
+        assetKind:
+          enum:
+          - bank_account
+          - credit_card
+          - cash
+          - financial_asset
+          type: string
+          description: |-
+            * `bank_account` - bank_account
+            * `credit_card` - credit_card
+            * `cash` - cash
+            * `financial_asset` - financial_asset
+          x-spec-enum-id: 7889c536b688f83f
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        branchName:
+          type: string
+          minLength: 1
+          description: 銀行口座のみ
+        accountNumber:
+          type: string
+          minLength: 1
+          description: 銀行口座のみ
+        issuer:
+          type: string
+          minLength: 1
+          description: カードのみ
+        last4:
+          type: string
+          minLength: 1
+          description: カードのみ
+          maxLength: 4
+        closingDay:
+          type: integer
+          maximum: 31
+          minimum: 1
+        paymentDay:
+          type: integer
+          maximum: 31
+          minimum: 1
+      required:
+      - assetKind
+      - name
+    AccountDeleteOut:
+      type: object
+      properties:
+        deleted:
+          type: integer
+        deletedTransactions:
+          type: integer
+        deletedSnapshots:
+          type: integer
+      required:
+      - deleted
+      - deletedSnapshots
+      - deletedTransactions
+    AccountPatchOut:
+      type: object
+      properties:
+        accountId:
+          type: integer
+        referenceUrl:
+          type: string
+      required:
+      - accountId
+      - referenceUrl
+    AssetAccountOut:
+      type: object
+      properties:
+        assetKind:
+          enum:
+          - bank_account
+          - credit_card
+          - cash
+          - financial_asset
+          type: string
+          description: |-
+            * `bank_account` - bank_account
+            * `credit_card` - credit_card
+            * `cash` - cash
+            * `financial_asset` - financial_asset
+          x-spec-enum-id: 7889c536b688f83f
+        accountId:
+          type: integer
+        accountName:
+          type: string
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+          description: カードは当月利用額
+        previousBalance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        balanceChange:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        lastUpdated:
+          type: string
+          format: date
+          nullable: true
+        source:
+          enum:
+          - transaction
+          - snapshot
+          - computed
+          - none
+          type: string
+          x-spec-enum-id: 2bc9ce5407abe96b
+          description: |-
+            残高の根拠。明細の残高列 / スナップショット / 動的計算 / 無し
+
+            * `transaction` - transaction
+            * `snapshot` - snapshot
+            * `computed` - computed
+            * `none` - none
+        hasCsvTemplate:
+          type: boolean
+        csvTemplateId:
+          type: integer
+          nullable: true
+        referenceUrl:
+          type: string
+      required:
+      - accountId
+      - accountName
+      - assetKind
+      - balance
+      - balanceChange
+      - csvTemplateId
+      - hasCsvTemplate
+      - lastUpdated
+      - previousBalance
+      - referenceUrl
+      - source
+    AssetsOut:
+      type: object
+      properties:
+        totalAssets:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: 銀行 + 現金 + 金融資産 (カードは含めない)
+        totalAssetsChange:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        bankAccountsTotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        bankAccountsTotalChange:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        creditCardsTotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        creditCardsTotalChange:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        cashWalletsTotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        cashWalletsTotalChange:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        financialAssetsTotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        financialAssetsTotalChange:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        previousMonthEnd:
+          type: string
+          format: date
+        bankAccounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetAccountOut'
+        creditCards:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetAccountOut'
+        cashWallets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetAccountOut'
+        financialAssets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetAccountOut'
+      required:
+      - bankAccounts
+      - bankAccountsTotal
+      - bankAccountsTotalChange
+      - cashWallets
+      - cashWalletsTotal
+      - cashWalletsTotalChange
+      - creditCards
+      - creditCardsTotal
+      - creditCardsTotalChange
+      - financialAssets
+      - financialAssetsTotal
+      - financialAssetsTotalChange
+      - previousMonthEnd
+      - totalAssets
+      - totalAssetsChange
+    AuthenticatedUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          title: メールアドレス
+          maxLength: 254
+        firstName:
+          type: string
+          title: 名
+          maxLength: 150
+        lastName:
+          type: string
+          title: 姓
+          maxLength: 150
+      required:
+      - email
+      - id
+    BudgetCopyInRequest:
+      type: object
+      properties:
+        sourceYear:
+          type: integer
+        sourceMonth:
+          type: integer
+          maximum: 12
+          minimum: 1
+        targetYear:
+          type: integer
+        targetMonth:
+          type: integer
+          maximum: 12
+          minimum: 1
+      required:
+      - sourceMonth
+      - sourceYear
+      - targetMonth
+      - targetYear
+    BudgetCopyOut:
+      type: object
+      properties:
+        copied:
+          type: integer
+        skipped:
+          type: integer
+          description: コピー先に既にあったカテゴリの数
+        targetPeriodId:
+          type: integer
+        totalAmountCopied:
+          type: boolean
+          description: 月の上限もコピーしたか
+      required:
+      - copied
+      - skipped
+      - targetPeriodId
+      - totalAmountCopied
+    BudgetInRequest:
+      type: object
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+          maximum: 12
+          minimum: 1
+        categoryId:
+          type: integer
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+      required:
+      - amount
+      - categoryId
+      - month
+      - year
+    BudgetOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        periodId:
+          type: integer
+        year:
+          type: integer
+        month:
+          type: integer
+        categoryId:
+          type: integer
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+      required:
+      - amount
+      - categoryId
+      - id
+      - month
+      - notes
+      - periodId
+      - year
+    BudgetSummaryItemOut:
+      type: object
+      properties:
+        allocationId:
+          type: integer
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categoryColor:
+          type: string
+        parentCategoryId:
+          type: integer
+          nullable: true
+        isParent:
+          type: boolean
+        budget:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        spent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: 自分と子カテゴリの支出合計
+        ownSpent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        childrenSpent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        childrenWithBudgetSpent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: 個別予算を持つ子の支出
+        childrenWithoutBudgetSpent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: 親予算で管理する子の支出
+        remaining:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        usageRate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,4})?$
+        notes:
+          type: string
+      required:
+      - allocationId
+      - budget
+      - categoryColor
+      - categoryId
+      - categoryName
+      - childrenSpent
+      - childrenWithBudgetSpent
+      - childrenWithoutBudgetSpent
+      - isParent
+      - notes
+      - ownSpent
+      - parentCategoryId
+      - remaining
+      - spent
+      - usageRate
+    BudgetSummaryOut:
+      type: object
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+        periodId:
+          type: integer
+          nullable: true
+        periodTotalAmount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+          description: 月の上限。未設定なら null
+        periodTotalSpent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: 予算未設定カテゴリも含む月の支出合計
+        totalBudget:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: カテゴリ予算の合計 (親子の二重計上なし)
+        totalSpent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetSummaryItemOut'
+      required:
+      - items
+      - month
+      - periodId
+      - periodTotalAmount
+      - periodTotalSpent
+      - totalBudget
+      - totalSpent
+      - year
+    CashAdjustmentInRequest:
+      type: object
+      properties:
+        paymentAccountId:
+          type: integer
+        date:
+          type: string
+          format: date
+        direction:
+          enum:
+          - in
+          - out
+          type: string
+          description: |-
+            * `in` - in
+            * `out` - out
+          x-spec-enum-id: e5ae62c3f7783fbb
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        category:
+          enum:
+          - allowance
+          - gift
+          - repayment
+          - other
+          type: string
+          description: |-
+            * `allowance` - allowance
+            * `gift` - gift
+            * `repayment` - repayment
+            * `other` - other
+          x-spec-enum-id: ca34710989c0043e
+        counterpartyName:
+          type: string
+        notes:
+          type: string
+      required:
+      - amount
+      - date
+      - direction
+      - paymentAccountId
+    CashAdjustmentOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        paymentAccountId:
+          type: integer
+        date:
+          type: string
+          format: date
+        direction:
+          enum:
+          - in
+          - out
+          type: string
+          description: |-
+            * `in` - in
+            * `out` - out
+          x-spec-enum-id: e5ae62c3f7783fbb
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        category:
+          enum:
+          - allowance
+          - gift
+          - repayment
+          - other
+          type: string
+          description: |-
+            * `allowance` - allowance
+            * `gift` - gift
+            * `repayment` - repayment
+            * `other` - other
+          x-spec-enum-id: ca34710989c0043e
+        counterpartyName:
+          type: string
+        notes:
+          type: string
+      required:
+      - amount
+      - category
+      - counterpartyName
+      - date
+      - direction
+      - id
+      - notes
+      - paymentAccountId
+    CashAdjustmentsOut:
+      type: object
+      properties:
+        adjustments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CashAdjustmentOut'
+      required:
+      - adjustments
+    CashHistoryEntryOut:
+      type: object
+      properties:
+        kind:
+          enum:
+          - transfer_in
+          - transfer_out
+          - expense
+          - adjustment
+          type: string
+          description: |-
+            * `transfer_in` - transfer_in
+            * `transfer_out` - transfer_out
+            * `expense` - expense
+            * `adjustment` - adjustment
+          x-spec-enum-id: 175cb8df569c54a1
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        amountSigned:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: 残高への影響。入金は正、出金は負
+        label:
+          type: string
+        notes:
+          type: string
+        otherAccountId:
+          type: integer
+        otherAccountName:
+          type: string
+        categoryName:
+          type: string
+        category:
+          type: string
+        direction:
+          enum:
+          - in
+          - out
+          type: string
+          description: |-
+            * `in` - in
+            * `out` - out
+          x-spec-enum-id: e5ae62c3f7783fbb
+        counterpartyName:
+          type: string
+        linkedExpenseAmount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        linkedExpenseCount:
+          type: integer
+      required:
+      - amountSigned
+      - date
+      - id
+      - kind
+      - label
+      - notes
+    CashHistoryOut:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/CashHistoryEntryOut'
+      required:
+      - entries
+    CategoryInRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        color:
+          type: string
+        notes:
+          type: string
+        parentId:
+          type: integer
+          nullable: true
+          description: 親カテゴリ。階層は 2 段まで
+      required:
+      - name
+    CategoryOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+          description: 'HEX (例 #1f927f)。空なら自動'
+        notes:
+          type: string
+        parentId:
+          type: integer
+          nullable: true
+        hasChildren:
+          type: boolean
+      required:
+      - color
+      - hasChildren
+      - id
+      - name
+      - notes
+      - parentId
+    CreatedOut:
+      type: object
+      properties:
+        created:
+          type: integer
+          description: 作成した件数
+      required:
+      - created
+    CsvImportInRequest:
+      type: object
+      properties:
+        accountId:
+          type: integer
+        encoding:
+          enum:
+          - cp932
+          - utf-8
+          type: string
+          x-spec-enum-id: f0fbea2b52e36346
+          description: |-
+            省略時はテンプレートの値
+
+            * `cp932` - cp932
+            * `utf-8` - utf-8
+        file:
+          type: string
+          format: binary
+          description: CSV (1 MB・5,000 行まで)
+      required:
+      - accountId
+      - file
+    CsvTemplateCreatedOut:
+      type: object
+      properties:
+        templateId:
+          type: integer
+        accountId:
+          type: integer
+        recordsRegistered:
+          type: boolean
+        created:
+          type: integer
+          description: 同時に取り込んだ明細の件数
+      required:
+      - accountId
+      - created
+      - recordsRegistered
+      - templateId
+    CsvTemplateInRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        notes:
+          type: string
+        hasHeader:
+          type: boolean
+        headerRowIndex:
+          type: integer
+        dateFormats:
+          type: string
+          minLength: 1
+          description: strptime 形式をカンマ区切りで (例 %Y/%m/%d,%Y-%m-%d)
+        encoding:
+          enum:
+          - cp932
+          - utf-8
+          type: string
+          description: |-
+            * `cp932` - cp932
+            * `utf-8` - utf-8
+          x-spec-enum-id: f0fbea2b52e36346
+        amountRule:
+          enum:
+          - signed
+          - split
+          - usage
+          type: string
+          description: |-
+            * `signed` - signed
+            * `split` - split
+            * `usage` - usage
+          x-spec-enum-id: c1e841ccf9491841
+        signedAmountColumn:
+          type: string
+        depositColumn:
+          type: string
+        withdrawalColumn:
+          type: string
+        dateColumn:
+          type: string
+          minLength: 1
+        descriptionColumn:
+          type: string
+        balanceColumn:
+          type: string
+        registerRecords:
+          type: boolean
+          description: true なら file の明細も同時に取り込む
+        file:
+          type: string
+          format: binary
+          description: CSV (1 MB・5,000 行まで)
+      required:
+      - dateColumn
+      - name
+    CsvTemplateOut:
+      type: object
+      properties:
+        name:
+          type: string
+        notes:
+          type: string
+        hasHeader:
+          type: boolean
+        headerRowIndex:
+          type: integer
+        dateFormats:
+          type: array
+          items:
+            type: string
+        encoding:
+          enum:
+          - cp932
+          - utf-8
+          type: string
+          description: |-
+            * `cp932` - cp932
+            * `utf-8` - utf-8
+          x-spec-enum-id: f0fbea2b52e36346
+        amountRule:
+          enum:
+          - signed
+          - split
+          - usage
+          type: string
+          description: |-
+            * `signed` - signed
+            * `split` - split
+            * `usage` - usage
+          x-spec-enum-id: c1e841ccf9491841
+        signedAmountColumn:
+          type: string
+        depositColumn:
+          type: string
+        withdrawalColumn:
+          type: string
+        dateColumn:
+          type: string
+        descriptionColumn:
+          type: string
+        balanceColumn:
+          type: string
+      required:
+      - amountRule
+      - balanceColumn
+      - dateColumn
+      - dateFormats
+      - depositColumn
+      - descriptionColumn
+      - encoding
+      - hasHeader
+      - headerRowIndex
+      - name
+      - notes
+      - signedAmountColumn
+      - withdrawalColumn
+    DeletedOut:
+      type: object
+      properties:
+        deleted:
+          type: integer
+          description: 削除した件数
+      required:
+      - deleted
+    DetailOut:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: 利用者向けのエラーメッセージ (DRF 標準の形式)
+      required:
+      - detail
+    ErrorOut:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 利用者向けのエラーメッセージ
+      required:
+      - error
+    ExpenseCreatedOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+        categoryId:
+          type: integer
+        paymentAccountId:
+          type: integer
+          nullable: true
+        sourceTransactionId:
+          type: integer
+          nullable: true
+        sourceCashAdjustmentId:
+          type: integer
+          nullable: true
+      required:
+      - amount
+      - categoryId
+      - date
+      - id
+      - notes
+      - paymentAccountId
+      - sourceCashAdjustmentId
+      - sourceTransactionId
+    ExpenseInRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        categoryId:
+          type: integer
+        notes:
+          type: string
+        paymentAccountId:
+          type: integer
+          nullable: true
+        sourceTransactionId:
+          type: integer
+          nullable: true
+          description: 紐付ける明細。残額を超える金額は登録できない
+      required:
+      - amount
+      - categoryId
+      - date
+    ExpenseOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categoryColor:
+          type: string
+        paymentAccountId:
+          type: integer
+          nullable: true
+        paymentAccountName:
+          type: string
+          nullable: true
+        paymentAccountType:
+          type: string
+          nullable: true
+        sourceTransactionId:
+          type: integer
+          nullable: true
+        sourceTransaction:
+          allOf:
+          - $ref: '#/components/schemas/SourceTransactionOut'
+          nullable: true
+        sourceCashAdjustmentId:
+          type: integer
+          nullable: true
+      required:
+      - amount
+      - categoryColor
+      - categoryId
+      - categoryName
+      - date
+      - id
+      - notes
+      - paymentAccountId
+      - paymentAccountName
+      - paymentAccountType
+      - sourceCashAdjustmentId
+      - sourceTransaction
+      - sourceTransactionId
+    ExpenseSummaryItemOut:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categoryColor:
+          type: string
+        parentCategoryId:
+          type: integer
+          nullable: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+      required:
+      - categoryColor
+      - categoryId
+      - categoryName
+      - parentCategoryId
+      - total
+    ExpenseSummaryOut:
+      type: object
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExpenseSummaryItemOut'
+      required:
+      - items
+      - month
+      - total
+      - year
+    ExpenseUpdatedOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+        categoryId:
+          type: integer
+        paymentAccountId:
+          type: integer
+          nullable: true
+        sourceTransactionId:
+          type: integer
+          nullable: true
+        sourceCashAdjustmentId:
+          type: integer
+          nullable: true
+        categoryName:
+          type: string
+        categoryColor:
+          type: string
+      required:
+      - amount
+      - categoryColor
+      - categoryId
+      - categoryName
+      - date
+      - id
+      - notes
+      - paymentAccountId
+      - sourceCashAdjustmentId
+      - sourceTransactionId
+    LoginInRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - password
+    LoginOut:
+      type: object
+      properties:
+        access:
+          type: string
+          description: アクセストークン (JWT、有効期限は短い)
+        user:
+          $ref: '#/components/schemas/LoginUserOut'
+      required:
+      - access
+      - user
+    LoginUserOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+      required:
+      - email
+      - id
+    MonthlySummaryAccountOut:
+      type: object
+      properties:
+        accountId:
+          type: integer
+        income:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        expense:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+      required:
+      - accountId
+      - expense
+      - income
+    MonthlySummaryOut:
+      type: object
+      properties:
+        totalIncome:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        totalExpense:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlySummaryAccountOut'
+      required:
+      - accounts
+      - totalExpense
+      - totalIncome
+    PatchedAccountPatchInRequest:
+      type: object
+      properties:
+        referenceUrl:
+          description: 明細ページなどの参照 URL
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
+    PatchedBudgetPatchInRequest:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+    PatchedCashAdjustmentPatchInRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        direction:
+          enum:
+          - in
+          - out
+          type: string
+          description: |-
+            * `in` - in
+            * `out` - out
+          x-spec-enum-id: e5ae62c3f7783fbb
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        category:
+          enum:
+          - allowance
+          - gift
+          - repayment
+          - other
+          type: string
+          description: |-
+            * `allowance` - allowance
+            * `gift` - gift
+            * `repayment` - repayment
+            * `other` - other
+          x-spec-enum-id: ca34710989c0043e
+        counterpartyName:
+          type: string
+        notes:
+          type: string
+    PatchedCategoryInRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        color:
+          type: string
+        notes:
+          type: string
+        parentId:
+          type: integer
+          nullable: true
+          description: 親カテゴリ。階層は 2 段まで
+    PatchedExpensePatchInRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        categoryId:
+          type: integer
+        notes:
+          type: string
+        paymentAccountId:
+          type: integer
+          nullable: true
+        sourceTransactionId:
+          type: integer
+          nullable: true
+        sourceCashAdjustmentId:
+          type: integer
+          nullable: true
+    PatchedSnapshotPatchInRequest:
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+    PatchedTransferPatchInRequest:
+      type: object
+      properties:
+        fromAccountId:
+          type: integer
+        toAccountId:
+          type: integer
+        notes:
+          type: string
+    PaymentAccountOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          enum:
+          - bank
+          - credit_card
+          - cash
+          type: string
+          description: |-
+            * `bank` - bank
+            * `credit_card` - credit_card
+            * `cash` - cash
+          x-spec-enum-id: a7a9deaa4213ce15
+        kind:
+          enum:
+          - bank_account
+          - credit_card
+          - cash
+          type: string
+          description: |-
+            * `bank_account` - bank_account
+            * `credit_card` - credit_card
+            * `cash` - cash
+          x-spec-enum-id: 4edb3d6bcbb9b006
+      required:
+      - id
+      - kind
+      - name
+      - type
+    PaymentAccountsOut:
+      type: object
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentAccountOut'
+      required:
+      - accounts
+    PeriodTotalInRequest:
+      type: object
+      properties:
+        year:
+          type: integer
+        month:
+          type: integer
+          maximum: 12
+          minimum: 1
+        totalAmount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+          description: null で上限を解除
+      required:
+      - month
+      - totalAmount
+      - year
+    PeriodTotalOut:
+      type: object
+      properties:
+        periodId:
+          type: integer
+        year:
+          type: integer
+        month:
+          type: integer
+        totalAmount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+      required:
+      - month
+      - periodId
+      - totalAmount
+      - year
+    SnapshotInRequest:
+      type: object
+      properties:
+        assetKind:
+          enum:
+          - bank_account
+          - credit_card
+          - cash
+          - financial_asset
+          type: string
+          description: |-
+            * `bank_account` - bank_account
+            * `credit_card` - credit_card
+            * `cash` - cash
+            * `financial_asset` - financial_asset
+          x-spec-enum-id: 7889c536b688f83f
+        accountId:
+          type: integer
+        asOf:
+          type: string
+          format: date
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+      required:
+      - accountId
+      - asOf
+      - assetKind
+      - balance
+    SnapshotOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        assetKind:
+          enum:
+          - bank_account
+          - credit_card
+          - cash
+          - financial_asset
+          type: string
+          description: |-
+            * `bank_account` - bank_account
+            * `credit_card` - credit_card
+            * `cash` - cash
+            * `financial_asset` - financial_asset
+          x-spec-enum-id: 7889c536b688f83f
+        accountId:
+          type: integer
+        asOf:
+          type: string
+          format: date
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+      required:
+      - accountId
+      - asOf
+      - assetKind
+      - balance
+      - id
+      - notes
+    SnapshotUpdatedOut:
+      type: object
+      properties:
+        updated:
+          type: integer
+        snapshot:
+          $ref: '#/components/schemas/SnapshotOut'
+      required:
+      - snapshot
+      - updated
+    SnapshotsOut:
+      type: object
+      properties:
+        snapshots:
+          type: array
+          items:
+            $ref: '#/components/schemas/SnapshotOut'
+      required:
+      - snapshots
+    SourceTransactionOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+      required:
+      - amount
+      - date
+      - description
+      - id
+    TransactionOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        description:
+          type: string
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+          description: 出金は負
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        notes:
+          type: string
+        linkedExpenseAmount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+          description: この明細に紐付いた支出の合計
+        linkedExpenseCount:
+          type: integer
+        linkedTransferId:
+          type: integer
+          nullable: true
+        linkedTransferAmount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        linkedTransferDirection:
+          enum:
+          - in
+          - out
+          - null
+          type: string
+          description: |-
+            * `in` - in
+            * `out` - out
+          x-spec-enum-id: e5ae62c3f7783fbb
+          nullable: true
+        linkedTransferOtherAccountId:
+          type: integer
+          nullable: true
+        linkedTransferOtherAccountName:
+          type: string
+          nullable: true
+        linkedTransferDate:
+          type: string
+          format: date
+          nullable: true
+        linkedTransferNotes:
+          type: string
+          nullable: true
+        linkedTransferOppositeFree:
+          type: boolean
+      required:
+      - amount
+      - balance
+      - date
+      - description
+      - id
+      - linkedExpenseAmount
+      - linkedExpenseCount
+      - linkedTransferAmount
+      - linkedTransferDate
+      - linkedTransferDirection
+      - linkedTransferId
+      - linkedTransferNotes
+      - linkedTransferOppositeFree
+      - linkedTransferOtherAccountId
+      - linkedTransferOtherAccountName
+      - notes
+    TransactionsOut:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionOut'
+      required:
+      - transactions
+    TransferInRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        fromAccountId:
+          type: integer
+        toAccountId:
+          type: integer
+        fromTransactionId:
+          type: integer
+          nullable: true
+        toTransactionId:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+      required:
+      - amount
+      - date
+      - fromAccountId
+      - toAccountId
+    TransferOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        fromAccountId:
+          type: integer
+        toAccountId:
+          type: integer
+        fromTransactionId:
+          type: integer
+          nullable: true
+        toTransactionId:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+      required:
+      - amount
+      - date
+      - fromAccountId
+      - fromTransactionId
+      - id
+      - notes
+      - toAccountId
+      - toTransactionId
+    TransfersOut:
+      type: object
+      properties:
+        transfers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferOut'
+      required:
+      - transfers
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

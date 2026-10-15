@@ -38,6 +38,8 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
     # logout 時の refresh 失効(blacklist)に必要。
     "rest_framework_simplejwt.token_blacklist",
+    # OpenAPI スキーマ (/api/schema/) と Swagger UI (/api/docs/)
+    "drf_spectacular",
 ]
 
 DJANGO_APPS = [
@@ -168,6 +170,26 @@ REST_FRAMEWORK = {
         "user": "600/min",
         "login": "10/min",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# OpenAPI。各ビューの @extend_schema と docs 用 serializer (ledger/api/schema.py 等) から生成する。
+SPECTACULAR_SETTINGS = {
+    "TITLE": "PB Ledger API",
+    "DESCRIPTION": (
+        "家計簿 (予算と支出)、資産管理 (口座・現金・金融資産の残高)、"
+        "クレジットカードの利用額を扱う REST API。"
+        "認証は Bearer のアクセストークンで、リフレッシュトークンは HttpOnly Cookie に置く。"
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    # レスポンスは CamelCaseJSONRenderer で camelCase になるので、スキーマも合わせる
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.contrib.djangorestframework_camel_case.camelize_serializer_fields",
+    ],
+    "CAMELIZE_NAMES": True,
+    "SCHEMA_PATH_PREFIX": "/api/",
 }
 
 SIMPLE_JWT = {

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from django.db import transaction
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ledger.api import schema as S
 from ledger.api.csv_import import (
     CSV_TOO_LARGE_ERROR,
     MAX_CSV_UPLOAD_BYTES,
@@ -22,6 +24,10 @@ from ledger.models import (
 
 
 class BankAccountCsvTemplateAPIView(APIView):
+    @extend_schema(
+        summary="口座の CSV テンプレート",
+        responses={200: S.CsvTemplateOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def get(self, request, account_id):
         try:
             account = PaymentAccount.objects.select_related("default_csv_template").get(
@@ -63,6 +69,11 @@ class BankAccountCsvTemplateAPIView(APIView):
             }
         )
 
+    @extend_schema(
+        summary="CSV テンプレートを登録 (同時に明細の取込も可)",
+        request={"multipart/form-data": S.CsvTemplateIn},
+        responses={201: S.CsvTemplateCreatedOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def post(self, request, account_id):
         name = (request.data.get("name") or "").strip()
         if not name:
@@ -206,6 +217,11 @@ class BankAccountCsvTemplateAPIView(APIView):
 
 
 class AccountCsvImportAPIView(APIView):
+    @extend_schema(
+        summary="テンプレートに従って CSV を取り込む",
+        request={"multipart/form-data": S.CsvImportIn},
+        responses={201: S.CreatedOut, 400: S.ErrorOut, 404: S.ErrorOut},
+    )
     def post(self, request):
         file = request.FILES.get("file")
         account_id = request.data.get("account_id")

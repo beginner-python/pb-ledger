@@ -1,4 +1,5 @@
 from django.conf import settings
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -6,6 +7,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from api import schema as A
 
 from .permissions import FrontendOriginPermission
 from .serializers import CustomTokenObtainPairSerializer
@@ -50,6 +53,13 @@ class LoginAPIView(APIView):
     # ここを [] にすると「認証処理自体を実行しない」動きになる。
     authentication_classes = []
 
+    @extend_schema(
+        summary="ログイン",
+        description="access を JSON で返し、refresh は HttpOnly Cookie に保存する。",
+        auth=[],
+        request=A.LoginIn,
+        responses={200: A.LoginOut, 401: A.DetailOut},
+    )
     def post(self, request):
         # email/password を検証して access/refresh を発行する。
         serializer = CustomTokenObtainPairSerializer(data=request.data)
@@ -73,6 +83,13 @@ class RefreshAPIView(APIView):
     permission_classes = [AllowAny, FrontendOriginPermission]
     authentication_classes = []
 
+    @extend_schema(
+        summary="アクセストークンを再発行",
+        description="Cookie の refresh を使う。Origin ヘッダが設定値と一致する場合のみ受け付ける。",
+        auth=[],
+        request=None,
+        responses={200: A.AccessOut, 401: A.DetailOut, 403: A.DetailOut},
+    )
     def post(self, request):
         # refresh は Cookie からのみ読む（リクエスト本文は使わない）。
         refresh_token = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
@@ -109,6 +126,13 @@ class LogoutAPIView(APIView):
     permission_classes = [AllowAny, FrontendOriginPermission]
     authentication_classes = []
 
+    @extend_schema(
+        summary="ログアウト",
+        description="refresh を失効させ Cookie を削除する。",
+        auth=[],
+        request=None,
+        responses={204: None, 403: A.DetailOut},
+    )
     def post(self, request):
         refresh_token = request.COOKIES.get(settings.AUTH_REFRESH_COOKIE_NAME)
         if refresh_token:

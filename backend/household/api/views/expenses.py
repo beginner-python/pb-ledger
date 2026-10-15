@@ -5,10 +5,12 @@ from __future__ import annotations
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from household.api import schema as H
 from household.api.common import parse_decimal, serialize_decimal
 from household.api.links import (
     _conflicting_sources,
@@ -28,6 +30,18 @@ from ledger.models import (
 
 
 class ExpenseCreateAPIView(APIView):
+    @extend_schema(
+        summary="支出の一覧",
+        parameters=[
+            H.YEAR_PARAM,
+            H.MONTH_PARAM,
+            H.PAYMENT_ACCOUNT_ID_PARAM,
+            H.UNLINKED_ONLY_PARAM,
+            H.SOURCE_TRANSACTION_ID_PARAM,
+            H.SOURCE_CASH_ADJUSTMENT_ID_PARAM,
+        ],
+        responses={200: H.ExpenseOut(many=True), 400: H.DetailOut},
+    )
     def get(self, request):
         year_param = request.query_params.get("year")
         month_param = request.query_params.get("month")
@@ -141,6 +155,11 @@ class ExpenseCreateAPIView(APIView):
             ]
         )
 
+    @extend_schema(
+        summary="支出を登録",
+        request=H.ExpenseIn,
+        responses={201: H.ExpenseCreatedOut, 400: H.DetailOut},
+    )
     def post(self, request):
         category_id = request.data.get("category_id") or request.data.get("categoryId")
         date_value = request.data.get("date")
@@ -269,6 +288,11 @@ class ExpenseCreateAPIView(APIView):
 
 
 class ExpenseDetailAPIView(APIView):
+    @extend_schema(
+        summary="支出を更新 (明細・現金入出金への紐付け変更を含む)",
+        request=H.ExpensePatchIn,
+        responses={200: H.ExpenseUpdatedOut, 400: H.DetailOut, 404: H.DetailOut},
+    )
     def patch(self, request, expense_id: int):
         try:
             expense = HouseholdExpense.objects.select_related("category").get(pk=expense_id)
@@ -410,6 +434,7 @@ class ExpenseDetailAPIView(APIView):
             }
         )
 
+    @extend_schema(summary="支出を削除", responses={204: None, 404: H.DetailOut})
     def delete(self, request, expense_id: int):
         try:
             expense = HouseholdExpense.objects.get(pk=expense_id)
