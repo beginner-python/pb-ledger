@@ -39,9 +39,30 @@ flowchart LR
 
 | 層 | 主な技術 |
 |---|---|
-| バックエンド | Django 6.1、Django REST Framework 3.18、SimpleJWT、psycopg 3、uv、ruff |
-| フロントエンド | React 19、TypeScript 5.9、Vite 7、Tailwind CSS 4、TanStack Query 5、Zustand、Chart.js 4、MSW 3 |
+| バックエンド | Django 6.1、Django REST Framework 3.18、SimpleJWT、drf-spectacular、psycopg 3、uv、ruff |
+| フロントエンド | React 19、TypeScript 5.9、Vite 7、Tailwind CSS 4、TanStack Query 5、Zustand、Chart.js 4、MSW 3、Vitest、Testing Library |
 | 実行環境 | Docker Compose（開発）、GitHub Pages（デモ） |
+
+## リポジトリ構成
+
+```
+backend/
+  api/            認証 (ログイン・リフレッシュ・ログアウト) と OpenAPI の入口
+  accounts/       利用者モデルと管理コマンド
+  ledger/         口座・明細・残高・CSV 取込・振替・現金入出金
+    api/views/    資源ごとのビュー (accounts, assets, cash, csv, snapshots, transfers)
+    api/balances.py, csv_import.py, parsing.py   ビューから切り出した計算と解釈
+    management/   seed_demo, record_demo_fixtures
+  household/      家計簿: カテゴリ・支出・予算・集計
+    api/views/    資源ごとのビュー (categories, expenses, budgets, summaries)
+    api/links.py  支出と明細・現金入出金の紐付け検証
+frontend/src/
+  features/       画面単位 (household, assets, credit_cards, auth, landing)
+  mocks/          公開デモ用の MSW ハンドラと記録済み応答
+  api/            fetch の共通処理 (アクセストークンの保持と再発行)
+docs/             スクリーンショットと OpenAPI 定義
+.github/          CI と Pages デプロイ
+```
 
 ## 設計で判断したこと
 
