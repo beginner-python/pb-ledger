@@ -424,6 +424,8 @@ export default function AccountDetail({
     if (!expenses) return
     autoEditAppliedTxIdRef.current = viewLinkedTxItem.id
     if (expenses.length === 1) {
+      // 紐付き支出が 1 件だけなら、取得完了時にそのまま編集状態へ入る
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       startEditExpense(expenses[0])
     }
   }, [viewLinkedTxItem, linkedExpensesQuery.data])

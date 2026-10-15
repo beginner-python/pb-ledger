@@ -39,7 +39,7 @@ flowchart LR
 
 | 層 | 主な技術 |
 |---|---|
-| バックエンド | Django 6.0、Django REST Framework 3.16、SimpleJWT、psycopg 3、uv、ruff |
+| バックエンド | Django 6.1、Django REST Framework 3.18、SimpleJWT、psycopg 3、uv、ruff |
 | フロントエンド | React 19、TypeScript 5.9、Vite 7、Tailwind CSS 4、TanStack Query 5、Zustand、Chart.js 4、MSW 3 |
 | 実行環境 | Docker Compose（開発）、GitHub Pages（デモ） |
 

@@ -202,16 +202,13 @@ export default function BalancePage() {
   const transactionStatus = mapQueryStatusToState(transactionQueryStatus)
   const transactionMessage = transactionQueryError?.message ?? ''
   const transactions = transactionData ?? []
-  const selectedMonthlySummary: MonthlySummaryAccount | null = useMemo(() => {
-    if (!detailAccount || detailAccount.assetKind !== 'bank_account' || !monthlySummary?.accounts) {
-      return null
-    }
-    return (
-      monthlySummary.accounts.find(
-        (account) => String(account.accountId) === String(detailAccount.accountId)
-      ) ?? null
-    )
-  }, [detailAccount, monthlySummary?.accounts])
+  // 口座数件の線形探索なのでメモ化しない
+  const selectedMonthlySummary: MonthlySummaryAccount | null =
+    detailAccount && detailAccount.assetKind === 'bank_account' && monthlySummary?.accounts
+      ? (monthlySummary.accounts.find(
+          (account) => String(account.accountId) === String(detailAccount.accountId)
+        ) ?? null)
+      : null
 
   const handleMonthChange = (year: number, month: number) => {
     setYearMonth(year, month)
@@ -451,6 +448,8 @@ export default function BalancePage() {
   useEffect(() => {
     if (!detailAccount) return
     resetDeleteAccountMutation()
+    // 詳細表示の口座 (URL 由来) に合わせてスナップショット対象を同期する
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSnapshotAccount(toSelectedAccount(detailAccount))
   }, [detailAccount, resetDeleteAccountMutation])
 
