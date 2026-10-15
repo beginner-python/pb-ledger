@@ -72,8 +72,10 @@ http://localhost:5173 を開き、`demo@example.com` / `demo-password` でログ
 ```sh
 docker compose exec backend python manage.py test
 docker compose exec backend ruff check .
-cd frontend && npm ci && npm run lint && npm run build
+cd frontend && npm ci && npm run lint && npm test && npm run build
 ```
+
+フロントのテストは Vitest と Testing Library で、公開デモと同じ記録済み応答を MSW から流して画面の集計まで確認します。
 
 公開デモ用の JSON を作り直す場合は、上の手順で投入したデータに対してホスト側から記録コマンドを実行し（[uv](https://docs.astral.sh/uv/) が必要）、demo モードでビルドします。
 

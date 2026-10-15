@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from "@tailwindcss/vite"
@@ -13,5 +14,10 @@ export default defineConfig(({ mode }) => {
     base: isDemo ? '/pb-ledger/' : '/',
     publicDir: isDemo ? 'public-demo' : 'public',
     server: isDemo ? undefined : { proxy: { '/api': 'http://backend:8000' } },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['src/test/setup.ts'],
+      css: false,
+    },
   }
 })
