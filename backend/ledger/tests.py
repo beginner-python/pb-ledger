@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.test import TestCase
 
-from ledger.api.views import import_transactions_with_template
+from ledger.api.csv_import import import_transactions_with_template
 from ledger.models import (
     CreditCardAccount,
     CsvAmountRule,
@@ -156,7 +156,7 @@ class ImportLimitTests(TestCase):
         )
 
     def test_rejects_too_many_rows(self):
-        from ledger.api.views import MAX_CSV_ROWS
+        from ledger.api.csv_import import MAX_CSV_ROWS
 
         body = "2026/08/10,テスト店,100\n" * (MAX_CSV_ROWS + 1)
         created, error = import_transactions_with_template(
@@ -167,7 +167,7 @@ class ImportLimitTests(TestCase):
         self.assertEqual(NormalizedTransaction.objects.count(), 0)
 
     def test_rejects_oversized_file(self):
-        from ledger.api.views import MAX_CSV_UPLOAD_BYTES
+        from ledger.api.csv_import import MAX_CSV_UPLOAD_BYTES
 
         padding = "x" * (MAX_CSV_UPLOAD_BYTES + 1)
         created, error = import_transactions_with_template(

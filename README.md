@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/beginner-python/pb-ledger/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beginner-python/pb-ledger/actions/workflows/ci.yml?query=branch%3Amain)
 
-個人向けの家計アプリです。月ごとの予算と支出、銀行口座や現金の残高、クレジットカードの利用額を一つの画面で記録します。
+個人向けの家計アプリです。月ごとの予算と支出、銀行口座や現金の残高、クレジットカードの利用額を一つの画面で記録します。自分の家計で約 10 か月使ってきたアプリから、公開用に切り出したものです。
 
 - デモ: https://beginner-python.github.io/pb-ledger/
 - デモは架空のデータで動く閲覧専用の環境です。バックエンドは動いておらず、入力しても保存されません。
